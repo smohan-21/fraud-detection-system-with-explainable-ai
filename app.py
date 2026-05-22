@@ -1,8 +1,7 @@
-﻿import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="Fraud Detection Dashboard",
                    page_icon="🔍", layout="wide")
@@ -14,7 +13,7 @@ def load_data():
 
 df = load_data()
 
-st.sidebar.title("🔍 Fraud Detection System")
+st.sidebar.title("Fraud Detection System")
 page = st.sidebar.selectbox("Navigate",
                              ["Overview",
                               "Transaction Explorer",
@@ -23,15 +22,17 @@ page = st.sidebar.selectbox("Navigate",
 st.sidebar.markdown("---")
 st.sidebar.subheader("Filters")
 risk_filter = st.sidebar.multiselect("Risk Tier",
-                                      options=["Critical Risk",
-                                               "Suspicious", "Clear"],
-                                      default=["Critical Risk",
-                                               "Suspicious", "Clear"])
+                                     options=["Critical Risk",
+                                              "Suspicious",
+                                              "Clear"],
+                                     default=["Critical Risk",
+                                              "Suspicious",
+                                              "Clear"])
 
 filtered_df = df[df["RiskTier"].isin(risk_filter)]
 
 if page == "Overview":
-    st.title("🔍 Fraud Detection System — Overview")
+    st.title("Fraud Detection System - Overview")
     st.markdown("---")
 
     col1, col2, col3, col4 = st.columns(4)
@@ -39,16 +40,19 @@ if page == "Overview":
     with col1:
         st.metric("Total Transactions",
                   f"{len(filtered_df):,}")
+
     with col2:
         fraud_count = filtered_df["isFraud"].sum()
         st.metric("Total Fraud Cases",
                   f"{int(fraud_count):,}")
+
     with col3:
         detection_rate = (fraud_count / len(filtered_df) * 100)
         st.metric("Detection Rate",
                   f"{detection_rate:.2f}%")
+
     with col4:
-        avg_fraud_amt = filtered_df[filtered_df["isFraud"]==1]["TransactionAmt"].mean()
+        avg_fraud_amt = filtered_df[filtered_df["isFraud"] == 1]["TransactionAmt"].mean()
         st.metric("Avg Fraud Amount",
                   f"${avg_fraud_amt:.2f}")
 
@@ -57,35 +61,35 @@ if page == "Overview":
     col1, col2 = st.columns(2)
 
     with col1:
-        tier_counts = filtered_df["RiskTier"].value_counts()
-        fig = px.pie(values=tier_counts.values,
-                     names=tier_counts.index,
-                     title="Risk Tier Distribution",
-                     hole=0.4,
-                     color=tier_counts.index,
-                     color_discrete_map={
-                         "Critical Risk": "#FF4444",
-                         "Suspicious": "#FFA500",
-                         "Clear": "#44BB44"})
-        st.plotly_chart(fig, use_container_width=True)
+        tier_counts = filtered_df["RiskTier"].value_counts().reset_index()
+        tier_counts.columns = ["RiskTier", "Count"]
+        fig1 = px.pie(tier_counts,
+                      values="Count",
+                      names="RiskTier",
+                      title="Risk Tier Distribution",
+                      hole=0.4,
+                      color="RiskTier",
+                      color_discrete_map={
+                          "Critical Risk": "#FF4444",
+                          "Suspicious": "#FFA500",
+                          "Clear": "#44BB44"})
+        st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
-    amt_data = filtered_df.groupby(['RiskTier']).agg(
-        AvgAmt=('TransactionAmt', 'mean'),
-        Count=('TransactionAmt', 'count')
-    ).reset_index()
-
-    fig2 = px.bar(amt_data,
-                  x='RiskTier',
-                  y='AvgAmt',
-                  color='RiskTier',
-                  title='Average Transaction Amount by Risk Tier',
-                  color_discrete_map={
-                      'Critical Risk': '#FF4444',
-                      'Suspicious': '#FFA500',
-                      'Clear': '#44BB44'})
-    fig2.update_layout(height=400)
-    st.plotly_chart(fig2, use_container_width=True)
+        amt_data = filtered_df.groupby("RiskTier").agg(
+            AvgAmt=("TransactionAmt", "mean")
+        ).reset_index()
+        fig2 = px.bar(amt_data,
+                      x="RiskTier",
+                      y="AvgAmt",
+                      color="RiskTier",
+                      title="Average Transaction Amount by Risk Tier",
+                      color_discrete_map={
+                          "Critical Risk": "#FF4444",
+                          "Suspicious": "#FFA500",
+                          "Clear": "#44BB44"})
+        fig2.update_layout(height=400)
+        st.plotly_chart(fig2, use_container_width=True)
 
     fig3 = px.histogram(filtered_df,
                         x="HourOfDay",
@@ -98,13 +102,14 @@ if page == "Overview":
     st.plotly_chart(fig3, use_container_width=True)
 
 elif page == "Transaction Explorer":
-    st.title("🔎 Transaction Explorer")
+    st.title("Transaction Explorer")
     st.markdown("---")
 
     search_id = st.text_input("Search by TransactionID")
 
     if search_id:
-        result = filtered_df[filtered_df["TransactionID"].astype(str) == search_id]
+        result = filtered_df[
+            filtered_df["TransactionID"].astype(str) == search_id]
         if len(result) > 0:
             st.success("Transaction Found!")
             col1, col2, col3 = st.columns(3)
@@ -121,11 +126,13 @@ elif page == "Transaction Explorer":
             st.error("Transaction ID not found!")
 
     st.subheader("Transaction Table")
+
+    amt_min = float(filtered_df["TransactionAmt"].min())
+    amt_max = float(filtered_df["TransactionAmt"].max())
+
     amt_range = st.slider("Filter by Transaction Amount",
-                          float(filtered_df["TransactionAmt"].min()),
-                          float(filtered_df["TransactionAmt"].max()),
-                          (float(filtered_df["TransactionAmt"].min()),
-                           float(filtered_df["TransactionAmt"].max())))
+                          amt_min, amt_max,
+                          (amt_min, amt_max))
 
     table_df = filtered_df[
         (filtered_df["TransactionAmt"] >= amt_range[0]) &
@@ -136,25 +143,26 @@ elif page == "Transaction Explorer":
 
     st.dataframe(table_df, use_container_width=True)
 
-    fig = px.scatter(filtered_df.head(1000),
-                     x="HourOfDay",
-                     y="TransactionAmt",
-                     color="RiskTier",
-                     title="TransactionAmt vs HourOfDay",
-                     color_discrete_map={
-                         "Critical Risk": "#FF4444",
-                         "Suspicious": "#FFA500",
-                         "Clear": "#44BB44"})
-    st.plotly_chart(fig, use_container_width=True)
+    fig4 = px.scatter(filtered_df.head(1000),
+                      x="HourOfDay",
+                      y="TransactionAmt",
+                      color="RiskTier",
+                      title="TransactionAmt vs HourOfDay",
+                      color_discrete_map={
+                          "Critical Risk": "#FF4444",
+                          "Suspicious": "#FFA500",
+                          "Clear": "#44BB44"})
+    st.plotly_chart(fig4, use_container_width=True)
 
 elif page == "SHAP Explainer":
-    st.title("🧠 SHAP Explainer")
+    st.title("SHAP Explainer")
     st.markdown("---")
 
     trans_id = st.text_input("Enter TransactionID for SHAP Explanation")
 
     if trans_id:
-        result = filtered_df[filtered_df["TransactionID"].astype(str) == trans_id]
+        result = filtered_df[
+            filtered_df["TransactionID"].astype(str) == trans_id]
         if len(result) > 0:
             prob = result["FraudProbability"].values[0]
             tier = result["RiskTier"].values[0]
@@ -171,17 +179,24 @@ elif page == "SHAP Explainer":
 
             st.subheader("Plain English Explanation")
             if tier == "Critical Risk":
-                st.error(f"🔴 This transaction has a very high fraud probability of {prob:.2%}. "
-                         f"The transaction amount of ${amt:.2f} and timing pattern "
-                         f"are strong indicators of fraudulent activity. "
-                         f"Immediate review is recommended.")
+                st.error(
+                    "This transaction has a very high fraud probability of "
+                    + f"{prob:.2%}. "
+                    + "The transaction amount of $"
+                    + f"{amt:.2f} "
+                    + "and timing pattern are strong indicators of fraud. "
+                    + "Immediate review is recommended.")
             elif tier == "Suspicious":
-                st.warning(f"🟡 This transaction has a moderate fraud probability of {prob:.2%}. "
-                           f"Some features of this transaction match known fraud patterns. "
-                           f"Manual review is suggested.")
+                st.warning(
+                    "This transaction has a moderate fraud probability of "
+                    + f"{prob:.2%}. "
+                    + "Some features match known fraud patterns. "
+                    + "Manual review is suggested.")
             else:
-                st.success(f"🟢 This transaction appears legitimate with only {prob:.2%} "
-                           f"fraud probability. No immediate action required.")
+                st.success(
+                    "This transaction appears legitimate with only "
+                    + f"{prob:.2%} "
+                    + "fraud probability. No immediate action required.")
         else:
             st.error("Transaction ID not found!")
 
@@ -194,12 +209,12 @@ elif page == "SHAP Explainer":
                        0.8, 0.7, 0.6, 0.5, 0.4]
     })
 
-    fig = px.bar(top_features,
-                 x="Importance",
-                 y="Feature",
-                 orientation="h",
-                 title="Top 10 SHAP Feature Importance",
-                 color="Importance",
-                 color_continuous_scale="Reds")
-    fig.update_layout(yaxis=dict(autorange="reversed"))
-    st.plotly_chart(fig, use_container_width=True)
+    fig5 = px.bar(top_features,
+                  x="Importance",
+                  y="Feature",
+                  orientation="h",
+                  title="Top 10 SHAP Feature Importance",
+                  color="Importance",
+                  color_continuous_scale="Reds")
+    fig5.update_layout(yaxis=dict(autorange="reversed"))
+    st.plotly_chart(fig5, use_container_width=True)
