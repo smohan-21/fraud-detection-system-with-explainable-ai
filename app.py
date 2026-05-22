@@ -75,17 +75,20 @@ if page == "Overview":
                          "Clear": "#44BB44"})
         st.plotly_chart(fig, use_container_width=True)
 
-    with col2:
-        fig2 = px.histogram(filtered_df, 
-                            x="TransactionAmt",
-                            color="RiskTier",
-                            title="Transaction Amount Distribution",
-                            log_x=True,
-                            color_discrete_map={
-                                "Critical Risk": "#FF4444",
-                                "Suspicious": "#FFA500",
-                                "Clear": "#44BB44"})
-        st.plotly_chart(fig2, use_container_width=True)
+with col2:
+    fig2 = px.histogram(filtered_df,
+                        x="TransactionAmt",
+                        color="RiskTier",
+                        title="Transaction Amount Distribution",
+                        log_x=True,
+                        nbins=50,
+                        barmode='overlay',
+                        color_discrete_map={
+                            "Critical Risk": "#FF4444",
+                            "Suspicious": "#FFA500",
+                            "Clear": "#44BB44"})
+    fig2.update_layout(height=400)
+    st.plotly_chart(fig2, use_container_width=True)
 
     # hour of day chart
     fig3 = px.histogram(filtered_df,
