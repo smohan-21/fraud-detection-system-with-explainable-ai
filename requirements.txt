@@ -2,3 +2,11 @@ streamlit
 pandas
 numpy
 plotly
+lightgbm
+xgboost
+scikit-learn
+imbalanced-learn
+shap
+matplotlib
+seaborn
+gdown
